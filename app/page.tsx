@@ -1,95 +1,125 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+'use client';
+
+import { useState } from 'react';
+import styles from './page.module.css';
+
+interface AnalysisResult {
+  score: number;
+  roast: string;
+  improvements: string[];
+  matchAnalysis: string;
+}
 
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [jobDescription, setJobDescription] = useState('');
+  const [resume, setResume] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [error, setError] = useState('');
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setResult(null);
+
+    try {
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ jobDescription, resume }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to analyze resume');
+      }
+
+      const data = await response.json();
+      setResult(data);
+    } catch (err) {
+      setError('Failed to analyze resume. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main className={styles.main}>
+      <h1 className={styles.title}>Resume Roaster 🔥</h1>
+      <p className={styles.description}>
+        Get your resume roasted by our mean AI critic
+      </p>
+
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <div className={styles.inputGroup}>
+          <label htmlFor="jobDescription">Job Description:</label>
+          <textarea
+            id="jobDescription"
+            value={jobDescription}
+            onChange={(e) => setJobDescription(e.target.value)}
+            required
+            placeholder="Paste the job description here..."
+            rows={6}
+          />
         </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+
+        <div className={styles.inputGroup}>
+          <label htmlFor="resume">Resume:</label>
+          <textarea
+            id="resume"
+            value={resume}
+            onChange={(e) => setResume(e.target.value)}
+            required
+            placeholder="Paste your resume here..."
+            rows={6}
           />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className={styles.submitButton}
         >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          {loading ? 'Roasting...' : 'Roast My Resume'}
+        </button>
+      </form>
+
+      {error && <div className={styles.error}>{error}</div>}
+
+      {result && (
+        <div className={styles.result}>
+          <div className={styles.scoreContainer}>
+            <h2>Roast Score: {result.score}/1000</h2>
+            <div className={styles.scoreBar}>
+              <div
+                className={styles.scoreProgress}
+                style={{ width: `${(result.score / 1000) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          <div className={styles.analysisSection}>
+            <h3>Match Analysis</h3>
+            <p>{result.matchAnalysis}</p>
+          </div>
+
+          <div className={styles.roastSection}>
+            <h3>The Roast</h3>
+            <p>{result.roast}</p>
+          </div>
+
+          <div className={styles.improvementsSection}>
+            <h3>Needed Improvements</h3>
+            <ul>
+              {result.improvements.map((improvement, index) => (
+                <li key={index}>{improvement}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+    </main>
   );
 }
