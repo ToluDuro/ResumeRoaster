@@ -43,7 +43,12 @@ Format your response as JSON with the following structure:
     });
 
     const response = completion.choices[0].message.content;
-    return NextResponse.json(JSON.parse(response));
+    if (!response) {
+        return NextResponse.json({ error: 'No response from completion.' }, { status: 500 });
+      }
+      
+      return NextResponse.json(JSON.parse(response));
+      
   } catch (error) {
     console.error('Error:', error);
     return NextResponse.json(
